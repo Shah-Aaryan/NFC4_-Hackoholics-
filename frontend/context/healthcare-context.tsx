@@ -122,6 +122,7 @@ interface HealthcareContextType {
   getMedications: () => Promise<void>
   getVitals: () => Promise<void>
   getNotifications: () => Promise<void>
+  getAgentAlerts: () => Promise<void>
   getPrescriptions: () => Promise<void>
   uploadPrescription: (formData: FormData) => Promise<Prescription>
   processPrescriptionWithGemini: (prescriptionId: string) => Promise<void>
@@ -454,6 +455,29 @@ export function HealthcareProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
+  const getAgentAlerts = async () => {
+    try {
+      const response = await apiClient.getAgentAlerts();
+      if (response.success) {
+        // Convert date strings to Date objects and map to Alert interface
+        const alertsWithDates = response.data.map((alert: any) => ({
+          _id: alert._id,
+          user_id: alert.user_id,
+          timestamp: new Date(alert.timestamp),
+          type: alert.type as "vital_alert" | "missed_meds" | "summary",
+          message: alert.message,
+          severity: alert.severity as "low" | "moderate" | "high",
+          acknowledged: alert.acknowledged || false,
+        }));
+        setAlerts(prev => [...prev, ...alertsWithDates]);
+      } else {
+        console.error('Failed to get agent alerts:', response.error);
+      }
+    } catch (error) {
+      console.error('Error getting agent alerts:', error);
+    }
+  };
+
   const getPrescriptions = async () => {
     try {
       const response = await apiClient.getPrescriptions();
@@ -629,6 +653,7 @@ export function HealthcareProvider({ children }: { children: React.ReactNode }) 
         getMedications,
         getVitals,
         getNotifications,
+        getAgentAlerts,
         getPrescriptions,
         uploadPrescription,
         processPrescriptionWithGemini,

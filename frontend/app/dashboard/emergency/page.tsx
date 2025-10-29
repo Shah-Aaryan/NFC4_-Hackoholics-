@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast"
 import { emergencyAPI } from "@/lib/api"
 import { useHealthcare } from "@/context/healthcare-context"
 import { useEffect } from "react"
+import type { EmergencyApiResponse } from "@/types/emergency"
 
 export default function EmergencyPage() {
   
@@ -101,25 +102,48 @@ useEffect(() => {
   }
 
   const handleShareSummary = async () => {
-    setIsLoading(true)
+    // Check if there are emergency contacts
+    if (!family?.emergency_contacts || family.emergency_contacts.length === 0) {
+      toast({
+        title: "No Emergency Contacts",
+        description: "Please add emergency contacts before sharing health summary.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      const response = await emergencyAPI.shareSummary()
+      const response = await emergencyAPI.shareSummary() as EmergencyApiResponse;
       if (response.success) {
-        toast({
-          title: "Health Summary Sent",
-          description: "Health summary shared with emergency contacts.",
-        })
+        const sentCount = response.sentTo?.length || 0;
+        const failedCount = response.failures?.length || 0;
+        
+        if (failedCount > 0) {
+          toast({
+            title: "Partially Sent",
+            description: `Summary sent to ${sentCount} contacts. ${failedCount} failed.`,
+            variant: "destructive",
+          });
+          console.warn("Failed to send to some contacts:", response.failures);
+        } else {
+          toast({
+            title: "Health Summary Shared",
+            description: `Summary successfully sent to ${sentCount} emergency contacts.`,
+          });
+        }
       } else {
-        throw new Error(response.error || "Failed to share summary")
+        throw new Error(response.error || "Failed to share summary");
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Could not share summary. Try again.",
+        description: error.message || "Could not share health summary. Please try again.",
         variant: "destructive",
-      })
+      });
+      console.error("Share summary error:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 

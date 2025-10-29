@@ -9,7 +9,7 @@ import { ThemeProvider } from "next-themes";  // NEW
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "HealthCare Family Dashboard",
+  title: "PariCare Family Dashboard",
   description: "Manage your family's health records and medications",
   generator: "v0.dev",
 };

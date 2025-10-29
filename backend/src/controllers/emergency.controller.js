@@ -3,6 +3,7 @@ import Profile from "../models/profile.model.js";
 import Medication from "../models/medication.model.js";
 import { sendEmergencyEmail } from "../utils/mailer.js";
 import { healthChatbot } from "../utils/geminiService.js";
+import Vital from "../models/vital.model.js";
 
 // ✅ GET /api/emergency/
 export const getEmergencyInfo = async (req, res) => {
@@ -138,41 +139,119 @@ Sent on: ${new Date().toLocaleString()}
 // ✅ POST /api/emergency/share-summary
 export const shareSummary = async (req, res) => {
   try {
-    const defaultEmail = process.env.EMERGENCY_RECEIVER_EMAIL;
-
-    if (!defaultEmail || !defaultEmail.includes("@")) {
-      return res.status(500).json({ error: "EMERGENCY_RECEIVER_EMAIL is missing or invalid." });
-    }
-
-    const [profile, medications] = await Promise.all([
+    // Get all necessary data
+    const [profile, medications, family, vitalsArray] = await Promise.all([
       Profile.findOne({ user_id: req.user._id }),
-      Medication.find({ user_id: req.user._id }),
+      Medication.find({ user_id: req.user._id }).sort({ start_date: -1 }),
+      Family.findById(req.user.family_id),
+      Vital.find({ user_id: req.user._id }).sort({ timestamp: -1 }).limit(1)
     ]);
 
+    if (!family?.emergency_contacts || family.emergency_contacts.length === 0) {
+      return res.status(400).json({ error: "No emergency contacts found" });
+    }
+
     const summaryText = `
-Health Summary for ${req.user.name}
+HEALTH SUMMARY REPORT
+--------------------
+Generated on: ${new Date().toLocaleString()}
 
+PERSONAL INFORMATION
+------------------
+Name: ${req.user.name}
 Email: ${req.user.email}
-Blood Group: ${profile?.blood_group || "Not Provided"}
-Allergies: ${profile?.allergies?.join(", ") || "None"}
-Conditions: ${profile?.existing_conditions?.join(", ") || "None"}
+Family Group: ${family.name}
+${profile ? `Blood Group: ${profile.blood_group || 'Not Provided'}
+Age: ${profile.age || 'Not Provided'}
+Gender: ${profile.gender || 'Not Provided'}` : 'No profile information available'}
 
-Current Medications:
-${
-  medications.length > 0
-    ? medications.map(m => `- ${m.medicine_name} (${m.dosage})`).join("\n")
-    : "None"
-}
+MEDICAL INFORMATION
+-----------------
+${profile ? `Allergies: ${profile.allergies?.join(", ") || "None reported"}
+Existing Conditions: ${profile.existing_conditions?.join(", ") || "None reported"}
+Family Doctor Email: ${profile.family_doctor_email?.join(", ") || "None registered"}` : 'No medical information available'}
 
-Sent on: ${new Date().toLocaleString()}
+CURRENT MEDICATIONS
+-----------------
+${medications.length > 0 ? medications.map(med => 
+  `- ${med.medicine_name} (${med.dosage})
+    Frequency: ${med.frequency}
+    Timing: ${med.timing.join(", ")}
+    Stock: ${med.stock_count} units remaining`
+).join("\n\n") : "No current medications"}
+
+${vitalsArray.length > 0 ? `
+RECENT VITAL SIGNS
+----------------
+Blood Pressure: ${vitalsArray[0].bp_systolic}/${vitalsArray[0].bp_diastolic} mmHg
+Blood Sugar: ${vitalsArray[0].sugar} mg/dL
+Temperature: ${vitalsArray[0].temperature}°F
+Weight: ${vitalsArray[0].weight} kg
+Recorded on: ${new Date(vitalsArray[0].timestamp).toLocaleString()}` : ""}
+
+EMERGENCY CONTACTS
+----------------
+${family.emergency_contacts.map(contact => 
+  `- ${contact.name} (${contact.relation})
+    Phone: ${contact.phone || 'Not provided'}
+    Email: ${contact.email}`
+).join("\n")}
+
+EMERGENCY INSTRUCTIONS
+--------------------
+1. This is an automated health summary. Please contact emergency services if needed.
+2. Contact family doctor or nearest emergency room for medical assistance.
+3. Always verify medication information with healthcare provider.
+4. For immediate assistance, contact the primary emergency contact listed above.
+
+This is an automated emergency health summary. Please do not reply.
     `.trim();
 
-    await sendEmergencyEmail(defaultEmail, "🩺 Emergency Health Summary", summaryText);
+    // Send email to all emergency contacts
+    try {
+      const validContacts = family.emergency_contacts.filter(c => c.email && c.email.includes("@"));
+      
+      if (validContacts.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: "No valid emergency contact emails found"
+        });
+      }
 
-    return res.status(200).json({
-      message: "Health summary sent to configured email.",
-      sentTo: defaultEmail,
-    });
+      const emailPromises = validContacts.map(contact => 
+        sendEmergencyEmail(
+          contact.email,
+          `🩺 Emergency Health Summary for ${req.user.name}`,
+          summaryText
+        ).catch(error => ({
+          email: contact.email,
+          error: error.message
+        }))
+      );
+
+      const results = await Promise.all(emailPromises);
+      
+      const failures = results.filter(r => r.error);
+      if (failures.length > 0) {
+        console.error("Failed to send to some contacts:", failures);
+        if (failures.length === validContacts.length) {
+          throw new Error("Failed to send emails to all contacts");
+        }
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Health summary shared with emergency contacts",
+        sentTo: validContacts.filter((_, i) => !results[i].error).map(c => c.email),
+        failures: failures.length > 0 ? failures : undefined
+      });
+    } catch (error) {
+      console.error("Email sending error:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Failed to send summary email. Please try again."
+      });
+    }
   } catch (error) {
     console.error("❌ shareSummary error:", error);
     return res.status(500).json({ error: "Failed to send summary email." });

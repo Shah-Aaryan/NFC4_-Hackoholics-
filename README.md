@@ -1,4 +1,4 @@
-# HealthCare Agent System
+# PariCare Agent System
 
 A comprehensive healthcare management system with AI-powered monitoring, prescription processing, and real-time health alerts.
 

@@ -1,11 +1,11 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "src/index.js",
   "type": "module",
   "scripts": {
     "dev": "nodemon src/index.js",
-    "start": "node server.js"
+    "start": "node src/index.js"
   },
   "author": "",
   "license": "ISC",
@@ -29,6 +29,9 @@
     "multer": "^2.0.2",
     "nodemailer": "^7.0.5",
     "tesseract.js": "^6.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
   },
   "keywords": [],
   "description": ""

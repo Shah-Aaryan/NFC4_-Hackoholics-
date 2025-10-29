@@ -171,6 +171,11 @@ class ApiClient {
     return this.request('/notifications')
   }
 
+  // Agent methods
+  async getAgentAlerts() {
+    return this.request('/agents/alerts')
+  }
+
   // Prescription methods
   async uploadPrescription(formData: FormData) {
     return this.request('/prescriptions', {

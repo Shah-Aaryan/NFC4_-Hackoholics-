@@ -224,7 +224,7 @@ export default function ReportsPage() {
       pdf.setFont('helvetica', 'italic');
       pdf.setTextColor(100, 100, 100);
       
-      const footerText = "This AI-generated report was created by the HealthCare Management System";
+      const footerText = "This AI-generated report was created by the PariCare Management System";
       const footerText2 = "For any questions, please consult with your healthcare provider";
       
       pdf.text(footerText, 105, yPosition, { align: 'center' });
@@ -569,7 +569,7 @@ export default function ReportsPage() {
 
         {/* Footer */}
         <div className="mt-8 pt-6 border-t text-center text-gray-500 text-sm">
-          <p>This report was generated automatically by the HealthCare Management System</p>
+          <p>This report was generated automatically by the PariCare Management System</p>
           <p>For any questions, please consult with your healthcare provider</p>
         </div>
       </div>
