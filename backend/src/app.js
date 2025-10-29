@@ -25,7 +25,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const corsOptions = {
-  origin: ['http://localhost:3000', 'http://localhost:3001'],  // allow both frontend ports
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://nfc-4-hackoholics-sable.vercel.app'
+  ],  // allow local dev and deployed frontend
   credentials: true,                // allow cookies and auth headers
 };
 
