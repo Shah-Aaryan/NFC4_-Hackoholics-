@@ -92,7 +92,7 @@ export function OCRUploader({ onClose, onUploadComplete }: OCRUploaderProps) {
       const token = localStorage.getItem("accessToken") || ""
 
       // Step 1: Upload prescription
-      const uploadRes = await fetch("http://localhost:8000/api/v1/prescriptions", {
+      const uploadRes = await fetch("https://nfc4-hackoholics.onrender.com/api/v1/prescriptions", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -107,7 +107,7 @@ export function OCRUploader({ onClose, onUploadComplete }: OCRUploaderProps) {
 
       // Step 2: Process OCR and extract medications
       const processRes = await fetch(
-        `http://localhost:8000/api/v1/prescriptions/${prescription._id}/process`,
+        `https://nfc4-hackoholics.onrender.com/api/v1/prescriptions/${prescription._id}/process`,
         {
           method: "POST",
           headers: {

@@ -31,7 +31,7 @@ useEffect(() => {
   const fetchContacts = async () => {
     setIsFetching(true)
     try {
-      const res = await fetch("http://localhost:8000/api/v1/emergency", {
+      const res = await fetch("https://nfc4-hackoholics.onrender.com/api/v1/emergency", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
